@@ -1,71 +1,133 @@
 const DB_NAME = "financas_pwa";
-const DB_VERSION = 1;
+const DB_VER = 1;
 
 let db = null;
 
-// Abrir ou criar o banco
+/* ======================
+   ABRIR / CRIAR BANCO
+====================== */
 function openDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const req = indexedDB.open(DB_NAME, DB_VER);
 
-    request.onupgradeneeded = () => {
-      const database = request.result;
+    req.onupgradeneeded = () => {
+      const dbx = req.result;
 
-      if (!database.objectStoreNames.contains("entries")) {
-        const store = database.createObjectStore("entries", { keyPath: "id" });
-        store.createIndex("byMonth", "month", { unique: false });
-        store.createIndex("byStatus", "status", { unique: false });
+      if (!dbx.objectStoreNames.contains("categories")) {
+        const s = dbx.createObjectStore("categories", { keyPath: "id" });
+        s.createIndex("byType", "type", { unique: false });
       }
 
-      if (!database.objectStoreNames.contains("rules")) {
-        database.createObjectStore("rules", { keyPath: "id" });
+      if (!dbx.objectStoreNames.contains("rules")) {
+        const s = dbx.createObjectStore("rules", { keyPath: "id" });
+        s.createIndex("byActive", "isActive", { unique: false });
+        s.createIndex("byType", "type", { unique: false });
       }
 
-      if (!database.objectStoreNames.contains("categories")) {
-        database.createObjectStore("categories", { keyPath: "id" });
+      if (!dbx.objectStoreNames.contains("entries")) {
+        const s = dbx.createObjectStore("entries", { keyPath: "id" });
+        s.createIndex("byMonth", "monthKey", { unique: false });
+        s.createIndex("byStatusMonth", ["status", "monthKey"], { unique: false });
+        s.createIndex("byRuleMonth", ["ruleId", "monthKey"], { unique: false });
       }
     };
 
-    request.onsuccess = () => {
-      db = request.result;
+    req.onsuccess = () => {
+      db = req.result;
       resolve(db);
     };
 
-    request.onerror = () => reject(request.error);
+    req.onerror = () => reject(req.error);
   });
 }
 
-// Utilitário ID
+/* ======================
+   UTILITÁRIOS
+====================== */
 function uid() {
   return crypto.randomUUID();
 }
 
-// Operações genéricas
-function add(storeName, value) {
+function store(name, mode = "readonly") {
+  return db.transaction(name, mode).objectStore(name);
+}
+
+/* ======================
+   OPERAÇÕES BÁSICAS
+====================== */
+function put(storeName, value) {
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, "readwrite");
-    const store = tx.objectStore(storeName);
-    store.add(value);
-    tx.oncomplete = () => resolve(value);
-    tx.onerror = () => reject(tx.error);
+    const req = store(storeName, "readwrite").put(value);
+    req.onsuccess = () => resolve(value);
+    req.onerror = () => reject(req.error);
   });
 }
 
 function getAll(storeName) {
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, "readonly");
-    const store = tx.objectStore(storeName);
-    const req = store.getAll();
-    req.onsuccess = () => resolve(req.result);
+    const req = store(storeName).getAll();
+    req.onsuccess = () => resolve(req.result || []);
     req.onerror = () => reject(req.error);
   });
 }
 
-function remove(storeName, id) {
+function del(storeName, id) {
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, "readwrite");
-    tx.objectStore(storeName).delete(id);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
+    const req = store(storeName, "readwrite").delete(id);
+    req.onsuccess = () => resolve(true);
+    req.onerror = () => reject(req.error);
   });
+}
+
+function clear(storeName) {
+  return new Promise((resolve, reject) => {
+    const req = store(storeName, "readwrite").clear();
+    req.onsuccess = () => resolve(true);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/* ======================
+   CONSULTAS ESPECÍFICAS
+====================== */
+function getEntriesByStatusMonth(status, monthKey) {
+  return new Promise((resolve, reject) => {
+    const idx = store("entries").index("byStatusMonth");
+    const req = idx.getAll([status, monthKey]);
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function existsEntryForRuleMonth(ruleId, monthKey) {
+  return new Promise((resolve, reject) => {
+    const idx = store("entries").index("byRuleMonth");
+    const req = idx.count([ruleId, monthKey]);
+    req.onsuccess = () => resolve((req.result || 0) > 0);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/* ======================
+   BACKUP / RESTORE
+====================== */
+async function exportAll() {
+  return {
+    exportedAt: new Date().toISOString(),
+    categories: await getAll("categories"),
+    rules: await getAll("rules"),
+    entries: await getAll("entries")
+  };
+}
+
+async function importAll(data) {
+  await clear("entries");
+  await clear("rules");
+  await clear("categories");
+
+  for (const c of (data.categories || [])) await put("categories", c);
+  for (const r of (data.rules || [])) await put("rules", r);
+  for (const e of (data.entries || [])) await put("entries", e);
+
+  return true;
 }
