@@ -1,5 +1,6 @@
-const CACHE_NAME = "financas-pwa-v1";
-const FILES_TO_CACHE = [
+const CACHE = "financas-pwa-v3"; // <-- aumente o número sempre que atualizar
+
+const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
@@ -8,14 +9,26 @@ const FILES_TO_CACHE = [
   "./manifest.json"
 ];
 
-self.addEventListener("install", event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(FILES_TO_CACHE))
-  );
+self.addEventListener("install", (e) => {
+  self.skipWaiting();
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
 });
 
-self.addEventListener("fetch", event => {
-  event.respondWith(
-    caches.match(event.request).then(response => response || fetch(event.request))
-  );
+self.addEventListener("activate", (e) => {
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.map((k) => (k !== CACHE ? caches.delete(k) : null)));
+    await self.clients.claim();
+  })());
+});
+
+self.addEventListener("fetch", (e) => {
+  e.respondWith((async () => {
+    const cached = await caches.match(e.request);
+    if (cached) return cached;
+    const res = await fetch(e.request);
+    const cache = await caches.open(CACHE);
+    cache.put(e.request, res.clone());
+    return res;
+  })());
 });
