@@ -1,4 +1,4 @@
-const CACHE = "financas-pwa-v3"; // <-- aumente o número sempre que atualizar
+const CACHE = "financas-pwa-v4"; // <-- aumente o número sempre que atualizar
 
 const ASSETS = [
   "./",
