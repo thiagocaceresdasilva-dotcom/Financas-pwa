@@ -1,249 +1,124 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#111827" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Finanças</title>
 
-  <link rel="manifest" href="./manifest.json" />
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
 
-  <!-- OCR (Cupom) -->
-  <script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"></script>
+  <meta name="theme-color" content="#0b1220">
 </head>
-
 <body>
-  <header class="topbar">
-    <div class="topbar__title">Finanças</div>
-    <div class="topbar__actions">
-      <button id="btnExport" class="btn btn--ghost" type="button">Exportar</button>
 
-      <label class="btn btn--ghost" for="fileImport">Importar</label>
-      <input id="fileImport" type="file" accept="application/json" hidden />
+<header class="top">
+  <h1>Finanças</h1>
+  <div class="top-actions">
+    <button id="exportar">Exportar</button>
+    <button id="importar">Importar</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- RESUMO -->
+  <section class="card">
+    <h2>Realizado</h2>
+    <div class="grid">
+      <div>Receitas <strong id="rReceitas">R$ 0,00</strong></div>
+      <div>Despesas <strong id="rDespesas">R$ 0,00</strong></div>
+      <div>Saldo <strong id="rSaldo">R$ 0,00</strong></div>
     </div>
-  </header>
+  </section>
 
-  <main class="container">
+  <section class="card">
+    <h2>Previsto</h2>
+    <div class="grid">
+      <div>Receitas <strong id="pReceitas">R$ 0,00</strong></div>
+      <div>Despesas <strong id="pDespesas">R$ 0,00</strong></div>
+      <div>Saldo <strong id="pSaldo">R$ 0,00</strong></div>
+    </div>
+  </section>
 
-    <section class="card">
-      <div class="row row--between row--center">
-        <div class="field">
-          <label>Mês</label>
-          <input id="monthPicker" type="month" />
-        </div>
+  <!-- NOVO LANÇAMENTO -->
+  <section class="card">
+    <h2>Novo lançamento</h2>
 
-        <button id="btnGenerateFixos" class="btn" type="button">Gerar fixos do mês</button>
-      </div>
-    </section>
+    <div class="row">
+      <select id="tipo">
+        <option value="despesa">Despesa</option>
+        <option value="receita">Receita</option>
+      </select>
 
-    <section class="grid">
-      <div class="card">
-        <div class="card__title">Realizado</div>
-        <div class="kpis">
-          <div class="kpi">
-            <div class="kpi__label">Receitas</div>
-            <div id="realIncome" class="kpi__value">R$ 0,00</div>
-          </div>
-          <div class="kpi">
-            <div class="kpi__label">Despesas</div>
-            <div id="realExpense" class="kpi__value">R$ 0,00</div>
-          </div>
-          <div class="kpi">
-            <div class="kpi__label">Saldo</div>
-            <div id="realBalance" class="kpi__value">R$ 0,00</div>
-          </div>
-        </div>
-      </div>
+      <select id="status">
+        <option value="previsto">Previsto</option>
+        <option value="realizado">Realizado</option>
+      </select>
+    </div>
 
-      <div class="card">
-        <div class="card__title">Previsto</div>
-        <div class="kpis">
-          <div class="kpi">
-            <div class="kpi__label">Receitas</div>
-            <div id="planIncome" class="kpi__value">R$ 0,00</div>
-          </div>
-          <div class="kpi">
-            <div class="kpi__label">Despesas</div>
-            <div id="planExpense" class="kpi__value">R$ 0,00</div>
-          </div>
-          <div class="kpi">
-            <div class="kpi__label">Saldo</div>
-            <div id="planBalance" class="kpi__value">R$ 0,00</div>
-          </div>
-        </div>
-      </div>
-    </section>
+    <input type="date" id="data">
+    <input type="number" id="valor" placeholder="Valor (R$)" step="0.01">
+    <select id="categoria"></select>
+    <input type="text" id="descricao" placeholder="Ex: mercado, farmácia...">
 
-    <section class="card">
-      <div class="card__title">Novo lançamento</div>
+    <!-- OCR -->
+    <div class="ocr-box">
+      <input type="file" id="ocrFile" accept="image/*" capture="environment">
+      <button id="lerCupom">📸 Ler cupom</button>
+      <small id="ocrStatus"></small>
+    </div>
 
-      <form id="entryForm" class="form">
-        <div class="row">
-          <div class="field">
-            <label>Tipo</label>
-            <select id="entryType">
-              <option value="income">Receita</option>
-              <option value="expense">Despesa</option>
-            </select>
-          </div>
+    <button class="primary" id="salvar">Salvar</button>
+  </section>
 
-          <div class="field">
-            <label>Status</label>
-            <select id="entryStatus">
-              <option value="planned">Previsto</option>
-              <option value="settled">Realizado</option>
-            </select>
-          </div>
+  <!-- FIXOS -->
+  <section class="card">
+    <h2>Fixos (regras)</h2>
 
-          <div class="field">
-            <label>Data</label>
-            <input id="entryDate" type="date" />
-          </div>
-        </div>
+    <select id="fixoTipo">
+      <option value="despesa">Despesa</option>
+      <option value="receita">Receita</option>
+    </select>
 
-        <div class="row">
-          <div class="field">
-            <label>Valor (R$)</label>
-            <input id="entryAmount" type="number" step="0.01" placeholder="0,00" required />
-          </div>
+    <input type="text" id="fixoNome" placeholder="Ex: Aluguel, Internet">
+    <input type="number" id="fixoValor" placeholder="Valor">
+    <input type="number" id="fixoDia" placeholder="Dia do mês">
 
-          <div class="field">
-            <label>Categoria</label>
-            <select id="entryCategory"></select>
-          </div>
+    <select id="fixoCategoria"></select>
 
-          <div class="field field--grow">
-            <label>Descrição</label>
-            <input id="entryNote" type="text" placeholder="Ex: aluguel, salário, mercado..." />
-          </div>
-        </div>
+    <label>
+      <input type="checkbox" id="fixoAtivo" checked>
+      Ativo
+    </label>
 
-        <!-- OCR CUPOM -->
-        <div class="row" style="gap:12px; align-items:center; margin-top:10px;">
-          <input id="receiptFile" type="file" accept="image/*" capture="environment" />
-          <button id="scanReceipt" class="btn btn--ghost" type="button">📸 Ler cupom (OCR)</button>
-        </div>
-        <div id="ocrStatus" class="muted" style="margin-top:8px;"></div>
-        <img id="receiptPreview" style="display:none; width:100%; margin-top:10px; border-radius:12px;" />
+    <button class="primary" id="addFixo">Adicionar fixo</button>
+  </section>
 
-        <div class="row row--end">
-          <button class="btn" type="submit">Salvar</button>
-        </div>
-      </form>
-    </section>
+  <!-- CATEGORIAS -->
+  <section class="card">
+    <h2>Categorias</h2>
 
-    <section class="grid">
-      <div class="card">
-        <div class="card__title">Previsto (itens)</div>
-        <ul id="plannedList" class="list"></ul>
-      </div>
+    <input type="text" id="catNome" placeholder="Ex: Mercado">
+    <select id="catTipo">
+      <option value="despesa">Despesa</option>
+      <option value="receita">Receita</option>
+    </select>
 
-      <div class="card">
-        <div class="card__title">Realizado (itens)</div>
-        <ul id="settledList" class="list"></ul>
-      </div>
-    </section>
+    <button class="primary" id="addCategoria">Adicionar categoria</button>
 
-    <section class="grid">
-      <div class="card">
-        <div class="card__title">Fixos (regras)</div>
+    <div id="listaCategorias"></div>
+  </section>
 
-        <form id="ruleForm" class="form">
-          <div class="row">
-            <div class="field">
-              <label>Tipo</label>
-              <select id="ruleType">
-                <option value="expense">Despesa</option>
-                <option value="income">Receita</option>
-              </select>
-            </div>
+</main>
 
-            <div class="field field--grow">
-              <label>Nome</label>
-              <input id="ruleTitle" placeholder="Ex: Aluguel, Internet, Salário" required />
-            </div>
-          </div>
+<script src="db.js"></script>
+<script src="app.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
+</script>
 
-          <div class="row">
-            <div class="field">
-              <label>Valor (R$)</label>
-              <input id="ruleAmount" type="number" step="0.01" required />
-            </div>
-
-            <div class="field">
-              <label>Dia do mês</label>
-              <input id="ruleDay" type="number" min="1" max="31" value="5" required />
-            </div>
-
-            <div class="field">
-              <label>Categoria</label>
-              <select id="ruleCategory"></select>
-            </div>
-
-            <div class="field field--center">
-              <label>Ativo</label>
-              <input id="ruleActive" type="checkbox" checked />
-            </div>
-          </div>
-
-          <div class="row row--end">
-            <button class="btn" type="submit">Adicionar fixo</button>
-          </div>
-        </form>
-
-        <ul id="rulesList" class="list"></ul>
-      </div>
-
-      <div class="card">
-        <div class="card__title">Categorias</div>
-
-        <form id="catForm" class="form">
-          <div class="row">
-            <div class="field field--grow">
-              <label>Nome</label>
-              <input id="catName" placeholder="Ex: Mercado, Transporte, Saúde..." required />
-            </div>
-
-            <div class="field">
-              <label>Tipo</label>
-              <select id="catType">
-                <option value="expense">Despesa</option>
-                <option value="income">Receita</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="row row--end">
-            <button class="btn" type="submit">Adicionar categoria</button>
-          </div>
-        </form>
-
-        <div class="subgrid">
-          <div>
-            <div class="muted">Despesas</div>
-            <ul id="catsExpense" class="list"></ul>
-          </div>
-          <div>
-            <div class="muted">Receitas</div>
-            <ul id="catsIncome" class="list"></ul>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <footer class="footer muted">
-      Dica: Exportar salva um JSON (backup). Importar restaura tudo.
-    </footer>
-  </main>
-
-  <script src="./db.js"></script>
-  <script src="./app.js"></script>
-
-  <script>
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("./sw.js");
-    }
-  </script>
 </body>
 </html>
